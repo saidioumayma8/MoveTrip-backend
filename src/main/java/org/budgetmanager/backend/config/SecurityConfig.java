@@ -26,7 +26,6 @@ import org.budgetmanager.backend.repository.UserInfoRepository;
 import org.budgetmanager.backend.repository.RoleRepository;
 
 
-
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -44,7 +43,11 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll()
+                        // THIS IS THE CORRECT, SECURE WAY TO DO THIS
+                        // Allows authentication and registration endpoints to be accessed without a token
+                        .requestMatchers("/auth/authenticateAndGetRole", "/auth/addNewUser").permitAll()
+                        // All other requests must be authenticated
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())

@@ -12,7 +12,7 @@ import java.util.Optional;
 
 @Repository
 public interface UserInfoRepository extends JpaRepository<UserInfo, Long> {
-    Optional<UserInfo> findByEmail(String email); // Use 'email' if that is the correct field for login
+    Optional<UserInfo> findByEmail(String email);
     Boolean existsByUsername(String username);
     Boolean existsByEmail(String email);
 }

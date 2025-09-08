@@ -45,8 +45,8 @@ public class Caravane implements Serializable {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
-    @JsonIgnore // <--- Add this line
-    private UserInfo owner; // <-- obligatoire
+    @JsonIgnore
+    private UserInfo owner;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -54,7 +54,6 @@ public class Caravane implements Serializable {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    // Constructeur par défaut
     public Caravane() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
@@ -72,39 +71,100 @@ public class Caravane implements Serializable {
     }
 
     // ----------------- GETTERS & SETTERS -----------------
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    // Corrected: The return type of getId() must be Long, not String
+    public Long getId() {
+        return id;
+    }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public String getName() {
+        return name;
+    }
 
-    public String getType() { return type; }
-    public void setType(String type) { this.type = type; }
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    public int getCapacity() { return capacity; }
-    public void setCapacity(int capacity) { this.capacity = capacity; }
+    public String getDescription() {
+        return description;
+    }
 
-    public BigDecimal getPricePerDay() { return pricePerDay; }
-    public void setPricePerDay(BigDecimal pricePerDay) { this.pricePerDay = pricePerDay; }
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-    public List<String> getImageUrls() { return imageUrls; }
-    public void setImageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; }
+    public String getType() {
+        return type;
+    }
 
-    public String getCity() { return city; }
-    public void setCity(String city) { this.city = city; }
+    public void setType(String type) {
+        this.type = type;
+    }
 
-    public boolean isAvailable() { return isAvailable; }
-    public void setAvailable(boolean available) { isAvailable = available; }
+    public int getCapacity() {
+        return capacity;
+    }
 
-    public UserInfo getOwner() { return owner; }
-    public void setOwner(UserInfo owner) { this.owner = owner; }
+    public void setCapacity(int capacity) {
+        this.capacity = capacity;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public BigDecimal getPricePerDay() {
+        return pricePerDay;
+    }
 
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public void setPricePerDay(BigDecimal pricePerDay) {
+        this.pricePerDay = pricePerDay;
+    }
+
+    public List<String> getImageUrls() {
+        return imageUrls;
+    }
+
+    public void setImageUrls(List<String> imageUrls) {
+        this.imageUrls = imageUrls;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
+    }
+
+    public boolean isAvailable() {
+        return isAvailable;
+    }
+
+    public void setAvailable(boolean available) {
+        isAvailable = available;
+    }
+
+    public UserInfo getOwner() {
+        return owner;
+    }
+
+    public void setOwner(UserInfo owner) {
+        this.owner = owner;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 }

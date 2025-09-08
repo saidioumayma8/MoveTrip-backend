@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "8081:8081"
+    depends_on:
+      - db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/movetrip_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: password
+    networks:
+      - backend-net
+
+  db:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"   # external:internal
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: movetrip_db
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - backend-net
+
+volumes:
+  db_data:
+
+networks:
+  backend-net:

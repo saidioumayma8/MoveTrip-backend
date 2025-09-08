@@ -33,18 +33,16 @@ public class CaravaneController {
 
     @PostMapping
     public Caravane create(@RequestBody CaravaneRequest request) {
-        // 🔹 Vérifier que l'ID du propriétaire est présent
+
         if (request.getOwnerId() == null) {
             throw new IllegalArgumentException("Owner ID must not be null");
         }
 
-        // 🔹 Récupérer le propriétaire
         UserInfo owner = userInfoService.findById(request.getOwnerId());
         if (owner == null) {
             throw new RuntimeException("Owner not found with id: " + request.getOwnerId());
         }
 
-        // 🔹 Créer la caravane
         Caravane c = new Caravane();
         c.setName(request.getName());
         c.setDescription(request.getDescription());

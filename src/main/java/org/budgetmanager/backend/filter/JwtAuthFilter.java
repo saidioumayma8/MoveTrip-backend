@@ -70,7 +70,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         boolean isPublicCaravanePost = path.equals("/api/caravanes") && method.equals("POST");
 
         // Ignore JWT for authentication endpoints
-        boolean isAuthEndpoint = path.startsWith("/auth/addNewUser") || path.startsWith("/auth/generateToken");
+        // I have corrected this line to match your UserController endpoint
+        boolean isAuthEndpoint = path.equals("/auth/addNewUser") || path.equals("/auth/authenticateAndGetRole");
 
         return isPublicCaravanePost || isAuthEndpoint;
     }
