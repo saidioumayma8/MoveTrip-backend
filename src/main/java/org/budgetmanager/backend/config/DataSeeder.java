@@ -22,13 +22,7 @@ import java.util.Collections;
 public class DataSeeder {
 
     @Bean
-    CommandLineRunner seedInitialData(
-            RoleRepository roleRepository,
-            UserInfoRepository userRepository,
-            CaravaneRepository caravaneRepository,
-            ReservationRepository reservationRepository,
-            PasswordEncoder passwordEncoder
-    ) {
+     {
         return args -> {
             // Seed roles
             Role roleAdmin = roleRepository.findByName("ROLE_ADMIN").orElseGet(() -> {
