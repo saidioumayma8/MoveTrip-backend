@@ -2,6 +2,7 @@ package org.budgetmanager.backend.controller;
 
 import org.budgetmanager.backend.model.AuthRequest;
 import org.budgetmanager.backend.model.UserInfo;
+import org.budgetmanager.backend.model.Role;
 import org.budgetmanager.backend.repository.UserInfoRepository;
 import org.budgetmanager.backend.repository.CaravaneRepository;
 import org.budgetmanager.backend.repository.ReservationRepository;
@@ -20,6 +21,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.core.GrantedAuthority;
+
+import java.util.Collection;
 
 import java.util.List;
 import java.util.Map;
@@ -59,23 +63,28 @@ class UserControllerTest {
     @InjectMocks
     private UserController userController;
 
+    private Role userRole;
+    private Role adminRole;
     private UserInfo testUser;
     private UserInfo testAdmin;
     private AuthRequest authRequest;
 
     @BeforeEach
     void setUp() {
+        userRole = new Role("ROLE_USER");
+        adminRole = new Role("ROLE_ADMIN");
+
         testUser = new UserInfo();
         testUser.setId(1L);
         testUser.setEmail("user@example.com");
         testUser.setUsername("testuser");
-        testUser.setRoles("ROLE_USER");
+        testUser.setRole(userRole);
 
         testAdmin = new UserInfo();
         testAdmin.setId(2L);
         testAdmin.setEmail("admin@example.com");
         testAdmin.setUsername("admin");
-        testAdmin.setRoles("ROLE_ADMIN");
+        testAdmin.setRole(adminRole);
 
         authRequest = new AuthRequest();
         authRequest.setUsername("user@example.com");
@@ -213,7 +222,7 @@ class UserControllerTest {
         when(authentication.getPrincipal()).thenReturn("admin@example.com");
         when(authentication.getName()).thenReturn("admin@example.com");
         when(authentication.getAuthorities()).thenReturn(
-                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+                (Collection<? extends GrantedAuthority>) List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
         );
 
         // When
@@ -246,7 +255,7 @@ class UserControllerTest {
         when(authentication.getPrincipal()).thenReturn("user@example.com");
         when(authentication.getName()).thenReturn("user@example.com");
         when(authentication.getAuthorities()).thenReturn(
-                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                (Collection<? extends GrantedAuthority>) List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
         // When

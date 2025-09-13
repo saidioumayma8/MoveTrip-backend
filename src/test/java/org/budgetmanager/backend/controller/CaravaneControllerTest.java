@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -59,7 +60,7 @@ class CaravaneControllerTest {
         testCaravane.setDescription("Test Description");
         testCaravane.setType("Camping-car");
         testCaravane.setCapacity(4);
-        testCaravane.setPricePerDay(100.0);
+        testCaravane.setPricePerDay(new BigDecimal("100.0"));
         testCaravane.setCity("Casablanca");
         testCaravane.setAvailable(true);
         testCaravane.setApprovalStatus("APPROVED");
@@ -78,7 +79,7 @@ class CaravaneControllerTest {
         when(caravaneService.findByApprovalStatus("APPROVED")).thenReturn(approvedCaravanes);
 
         // When
-        List<Caravane> result = caravaneController.getAllApprovedCaravanes();
+        List<Caravane> result = caravaneController.getAll();
 
         // Then
         assertEquals(1, result.size());
