@@ -3,27 +3,91 @@ package org.budgetmanager.backend.controller;
 import org.budgetmanager.backend.model.Caravane;
 import org.budgetmanager.backend.model.UserInfo;
 import org.budgetmanager.backend.service.CaravaneService;
-import org.budgetmanager.backend.service.UserInfoService;
-import org.budgetmanager.backend.dto.caravane.CaravaneRequest;
+import org.budgetmanager.backend.repository.UserInfoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/caravanes")
-@CrossOrigin(origins = "http://localhost:4200")
 public class CaravaneController {
-
     @Autowired
     private CaravaneService service;
 
     @Autowired
-    private UserInfoService userInfoService;
+    private UserInfoRepository userInfoRepository;
 
     @GetMapping
     public List<Caravane> getAll() {
-        return service.findAll();
+        // Only return approved caravanes for public access
+        List<Caravane> approved = service.findByApprovalStatus("APPROVED");
+        System.out.println("Public caravan request - Found " + approved.size() + " approved caravanes");
+
+        // Debug: also check total caravanes
+        List<Caravane> allCaravanes = (List<Caravane>) service.findAll();
+        System.out.println("Debug: Total caravanes in database: " + allCaravanes.size());
+
+        return approved;
+    }
+
+    @PostMapping("/approve-all-existing")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<Map<String, Object>> approveAllExistingCaravanes() {
+        List<Caravane> allCaravanes = (List<Caravane>) service.findAll();
+        int approvedCount = 0;
+
+        for (Caravane caravane : allCaravanes) {
+            if (!"APPROVED".equals(caravane.getApprovalStatus())) {
+                caravane.setApprovalStatus("APPROVED");
+                caravane.setAvailable(true);
+                service.save(caravane);
+                approvedCount++;
+                System.out.println("Approved caravan: " + caravane.getName());
+            }
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Approved all existing caravanes");
+        response.put("approvedCount", approvedCount);
+
+        System.out.println("Approved " + approvedCount + " existing caravanes");
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/pending")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public List<Caravane> getPendingCaravanes() {
+        // Debug authentication context
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        System.out.println("Admin endpoint - Authentication: " + auth);
+        System.out.println("Admin endpoint - Principal: " + auth.getPrincipal());
+        System.out.println("Admin endpoint - Authorities: " + auth.getAuthorities());
+
+        List<Caravane> pending = service.findByApprovalStatus("PENDING");
+        System.out.println("Admin requested pending caravanes. Found: " + pending.size() + " items");
+        for (Caravane c : pending) {
+            System.out.println("  - ID: " + c.getId() + ", Name: " + c.getName() + ", Status: " + c.getApprovalStatus());
+        }
+        return pending;
+    }
+
+    @GetMapping("/all")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public List<Caravane> getAllCaravanes() {
+        return (List<Caravane>) service.findAll();
     }
 
     @GetMapping("/{id}")
@@ -31,60 +95,151 @@ public class CaravaneController {
         return service.findById(id);
     }
 
-    @PostMapping
-    public Caravane create(@RequestBody CaravaneRequest request) {
-
-        if (request.getOwnerId() == null) {
-            throw new IllegalArgumentException("Owner ID must not be null");
-        }
-
-        UserInfo owner = userInfoService.findById(request.getOwnerId());
-        if (owner == null) {
-            throw new RuntimeException("Owner not found with id: " + request.getOwnerId());
-        }
-
-        Caravane c = new Caravane();
-        c.setName(request.getName());
-        c.setDescription(request.getDescription());
-        c.setType(request.getType());
-        c.setCapacity(request.getCapacity());
-        c.setPricePerDay(request.getPricePerDay());
-        c.setImageUrls(request.getImageUrls());
-        c.setCity(request.getCity());
-        c.setAvailable(request.isAvailable());
-        c.setOwner(owner);
-
-        return service.save(c);
+    @GetMapping("/owner/{ownerId}")
+    public List<Caravane> getCaravanesByOwner(@PathVariable Long ownerId) {
+        return service.findByOwnerId(ownerId);
     }
 
+    @PostMapping
+    @PreAuthorize("hasRole('ROLE_USER')") // Restored security for user creation
+    public ResponseEntity<Caravane> create(@RequestBody Caravane caravane) {
+        System.out.println("Creating new caravane: " + caravane.getName());
+        System.out.println("Initial approval status: " + caravane.getApprovalStatus());
+
+        // Get the authenticated user's email from the security context
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentPrincipalEmail = authentication.getName();
+        System.out.println("Authenticated user: " + currentPrincipalEmail);
+
+        // Find the user entity from the database using their email
+        Optional<UserInfo> ownerOptional = userInfoRepository.findByEmail(currentPrincipalEmail);
+
+        if (ownerOptional.isPresent()) {
+            UserInfo owner = ownerOptional.get();
+            // Associate the authenticated user as the owner of the new caravane
+            caravane.setOwner(owner);
+
+            // Set initial status to PENDING for admin approval
+            caravane.setApprovalStatus("PENDING");
+            caravane.setAvailable(false);
+
+            Caravane savedCaravane = service.save(caravane);
+            System.out.println("Caravane saved with ID: " + savedCaravane.getId() + ", Status: " + savedCaravane.getApprovalStatus());
+
+            return new ResponseEntity<>(savedCaravane, HttpStatus.CREATED);
+        } else {
+            // This should not happen if the JWT token is valid and corresponds to an existing user
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user not found.");
+        }
+    }
 
     @PutMapping("/{id}")
-    public Caravane update(@PathVariable Long id, @RequestBody CaravaneRequest request) {
-        Caravane c = service.findById(id);
-        if (c == null) {
-            throw new RuntimeException("Caravane not found with id: " + id);
-        }
-
-        UserInfo owner = userInfoService.findById(request.getOwnerId());
-        if (owner == null) {
-            throw new RuntimeException("Owner not found with id: " + request.getOwnerId());
-        }
-
-        c.setName(request.getName());
-        c.setDescription(request.getDescription());
-        c.setType(request.getType());
-        c.setCapacity(request.getCapacity());
-        c.setPricePerDay(request.getPricePerDay());
-        c.setImageUrls(request.getImageUrls());
-        c.setCity(request.getCity());
-        c.setAvailable(request.isAvailable());
-        c.setOwner(owner);
-
+    @PreAuthorize("hasRole('ROLE_USER')") // Restored security for user updates
+    public Caravane update(@PathVariable Long id, @RequestBody Caravane c) {
+        c.setId(id);
         return service.save(c);
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<Map<String, String>> delete(@PathVariable Long id) {
+        Caravane caravane = service.findById(id);
+        if (caravane == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        System.out.println("Admin deleting caravan: " + caravane.getName() + " (ID: " + id + ")");
         service.delete(id);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Caravan deleted successfully");
+        response.put("deletedCaravan", caravane.getName());
+
+        return ResponseEntity.ok(response);
+    }
+
+    // Admin approval endpoints
+    @PatchMapping("/{id}/approve")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<Caravane> approveCaravane(@PathVariable Long id) {
+        Caravane caravane = service.findById(id);
+        if (caravane == null) {
+            return ResponseEntity.notFound().build();
+        }
+        caravane.setApprovalStatus("APPROVED");
+        caravane.setAvailable(true); // Make it available when approved
+        Caravane updated = service.save(caravane);
+        return ResponseEntity.ok(updated);
+    }
+
+    @GetMapping("/debug-all")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<Map<String, Object>> debugAllCaravanes() {
+        List<Caravane> allCaravanes = (List<Caravane>) service.findAll();
+        Map<String, Object> debug = new HashMap<>();
+
+        debug.put("total", allCaravanes.size());
+        debug.put("approved", service.findByApprovalStatus("APPROVED").size());
+        debug.put("pending", service.findByApprovalStatus("PENDING").size());
+        debug.put("rejected", service.findByApprovalStatus("REJECTED").size());
+
+        List<Map<String, Object>> details = new ArrayList<>();
+        for (Caravane c : allCaravanes) {
+            Map<String, Object> detail = new HashMap<>();
+            detail.put("id", c.getId());
+            detail.put("name", c.getName());
+            detail.put("status", c.getApprovalStatus());
+            detail.put("available", c.isAvailable());
+            details.add(detail);
+        }
+        debug.put("details", details);
+
+        System.out.println("Debug: Total caravanes: " + allCaravanes.size());
+        return ResponseEntity.ok(debug);
+    }
+
+    @PatchMapping("/approve-all-pending")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<Map<String, Object>> approveAllPendingCaravanes() {
+        List<Caravane> pendingCaravanes = service.findByApprovalStatus("PENDING");
+        int approvedCount = 0;
+
+        for (Caravane caravane : pendingCaravanes) {
+            caravane.setApprovalStatus("APPROVED");
+            caravane.setAvailable(true);
+            service.save(caravane);
+            approvedCount++;
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Successfully approved all pending caravanes");
+        response.put("approvedCount", approvedCount);
+
+        return ResponseEntity.ok(response);
+    }
+
+
+    @PatchMapping("/{id}/reject")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<Caravane> rejectCaravane(@PathVariable Long id) {
+        Caravane caravane = service.findById(id);
+        if (caravane == null) {
+            return ResponseEntity.notFound().build();
+        }
+        caravane.setApprovalStatus("REJECTED");
+        caravane.setAvailable(false); // Make it unavailable when rejected
+        Caravane updated = service.save(caravane);
+        return ResponseEntity.ok(updated);
+    }
+
+    @GetMapping("/debug-all-no-auth")
+    public List<Caravane> debugAllCaravanesNoAuth() {
+        List<Caravane> all = (List<Caravane>) service.findAll();
+        System.out.println("DEBUG: Found " + all.size() + " total caravanes");
+        for (Caravane c : all) {
+            System.out.println("  - ID: " + c.getId() + ", Name: " + c.getName() + ", Status: " + c.getApprovalStatus());
+        }
+        return all;
     }
 }
+

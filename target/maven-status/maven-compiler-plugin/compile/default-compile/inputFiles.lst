@@ -1,4 +1,5 @@
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\BackendApplication.java
+C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\config\DataSeeder.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\config\SecurityConfig.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\controller\CaravaneController.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\controller\ReservationCntroller.java
@@ -7,6 +8,7 @@ C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\dto\a
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\dto\caravane\CaravaneListDto.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\dto\caravane\CaravaneRequest.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\dto\location\LocationDto.java
+C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\dto\reservation\UpdateReservationRequest.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\dto\ReservationRequest.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\dto\ReservationResponse.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\dto\user\UserDto.java
@@ -14,14 +16,18 @@ C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\dto\U
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\filter\JwtAuthFilter.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\model\AuthRequest.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\model\Caravane.java
+C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\model\Itinerary.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\model\Lieu.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\model\Location.java
+C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\model\Paiement.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\model\Reservation.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\model\Role.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\model\UserInfo.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\repository\CaravaneRepository.java
+C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\repository\ItineraryRepository.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\repository\LieuRepository.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\repository\LocationRepository.java
+C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\repository\PaiementRepository.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\repository\ReservationRepository.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\repository\RoleRepository.java
 C:\Users\oumay\MoveTrip.ma\backend\src\main\java\org\budgetmanager\backend\repository\UserInfoRepository.java

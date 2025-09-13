@@ -21,7 +21,7 @@ public class Reservation implements Serializable {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false) // The user who made the reservation
-    private UserInfo userInfo; // Changed 'UserInfo' to 'userInfo'
+    private UserInfo userInfo;
 
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
@@ -63,8 +63,6 @@ public class Reservation implements Serializable {
 
     // Getters and Setters (generate all of them)
     public Long getId() {
-
-
         return id;
     }
 
@@ -80,11 +78,11 @@ public class Reservation implements Serializable {
         this.caravane = caravane;
     }
 
-    public UserInfo getUserInfo() { // Changed 'getUser' to 'getUserInfo'
+    public UserInfo getUserInfo() {
         return userInfo;
     }
 
-    public void setUserInfo(UserInfo userInfo) { // Changed 'setUser' to 'setUserInfo'
+    public void setUserInfo(UserInfo userInfo) {
         this.userInfo = userInfo;
     }
 

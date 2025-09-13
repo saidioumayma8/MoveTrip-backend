@@ -114,5 +114,9 @@ public class UserInfo implements Serializable{
             this.updatedAt = updatedAt;
         }
 
+        // Method to get role name as string for compatibility
+        public String getRoles() {
+            return role != null ? role.getName() : "ROLE_USER";
+        }
 
-}
+    }

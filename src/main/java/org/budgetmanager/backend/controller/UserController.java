@@ -1,93 +1,125 @@
 package org.budgetmanager.backend.controller;
-
 import org.budgetmanager.backend.model.AuthRequest;
-import org.budgetmanager.backend.model.UserInfo;
+import org.budgetmanager.backend.model.UserInfo; // <-- ENSURE THIS IS PRESENT AND CORRECT
+import org.budgetmanager.backend.repository.UserInfoRepository;
+import org.budgetmanager.backend.repository.CaravaneRepository;
+import org.budgetmanager.backend.repository.ReservationRepository;
 import org.budgetmanager.backend.service.UserInfoService;
 import org.budgetmanager.backend.service.JwtService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken; // <-- FIX THIS TYPO
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
+import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "http://localhost:4200")
 public class UserController {
 
-    @Autowired
-    private UserInfoService service;
-    @Autowired
-    private JwtService jwtService;
-    @Autowired
-    private AuthenticationManager authenticationManager;
+    private final UserInfoService service;
+    private final JwtService jwtService;
+    private final AuthenticationManager authenticationManager;
+    private final UserInfoRepository userInfoRepository;
+    private final CaravaneRepository caravaneRepository;
+    private final ReservationRepository reservationRepository;
 
     @Autowired
-    private PasswordEncoder encoder;
-
-    public UserController(UserInfoService service, JwtService jwtService, AuthenticationManager authenticationManager) {
+    public UserController(UserInfoService service,
+                          JwtService jwtService,
+                          AuthenticationManager authenticationManager,
+                          UserInfoRepository userInfoRepository,
+                          CaravaneRepository caravaneRepository,
+                          ReservationRepository reservationRepository) {
         this.service = service;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
+        this.userInfoRepository = userInfoRepository;
+        this.caravaneRepository = caravaneRepository;
+        this.reservationRepository = reservationRepository;
+    }
+
+    @GetMapping("/welcome")
+    public String welcome() {
+        return "Welcome this endpoint is not secure";
     }
 
     @PostMapping("/addNewUser")
-    public ResponseEntity<Void> addNewUser(@RequestBody UserInfo userInfo) {
-        try {
-            // Encode the password before saving the user
-            userInfo.setPassword(encoder.encode(userInfo.getPassword()));
-            service.addUser(userInfo);
-            return ResponseEntity.status(HttpStatus.CREATED).build();
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        }
+    public String addNewUser(@RequestBody UserInfo userInfo) {
+        return service.addUser(userInfo);
     }
 
-    @PostMapping("/authenticateAndGetRole")
-    public ResponseEntity<?> authenticateAndGetRole(@RequestBody AuthRequest authRequest) {
+    @PostMapping("/generateToken")
+    public String authenticateAndGetToken(@RequestBody AuthRequest authRequest) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(authRequest.getUsername(), authRequest.getPassword())
         );
         if (authentication.isAuthenticated()) {
-            String role = authentication.getAuthorities().stream()
-                    .map(GrantedAuthority::getAuthority)
-                    .findFirst()
-                    .orElse("ROLE_USER");
-
-            // Pass the user's role to the JWT service to include it in the token
-            String token = jwtService.generateToken(authRequest.getUsername(), role);
-
-            return ResponseEntity.ok(new AuthResponse(token, role));
+            return jwtService.generateToken(authRequest.getUsername());
         } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid user credentials");
+            throw new UsernameNotFoundException("Invalid user request!");
         }
     }
 
-    // THIS IS TEMPORARY CODE TO GENERATE A VALID PASSWORD HASH.
-    // YOU MUST DELETE THIS METHOD AFTER YOU COMPLETE STEP 3.
-    @GetMapping("/generate-hash")
-    public String generateHash() {
-        String password = "admin123";
-        String hash = encoder.encode(password);
-        System.out.println("Generated BCrypt Hash for 'admin123': " + hash);
-        return "Hash generated. Check console.";
+    // Matches frontend expectation: returns token, role, and userId
+    @PostMapping("/authenticateAndGetRole")
+    public java.util.Map<String, Object> authenticateAndGetRole(@RequestBody AuthRequest authRequest) {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(authRequest.getUsername(), authRequest.getPassword())
+        );
+        if (!authentication.isAuthenticated()) {
+            throw new UsernameNotFoundException("Invalid user request!");
+        }
+
+        String token = jwtService.generateToken(authRequest.getUsername());
+        UserInfo user = userInfoRepository.findByEmail(authRequest.getUsername())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        response.put("token", token);
+        response.put("role", user.getRoles());
+        response.put("userId", user.getId());
+        return response;
     }
 
-    static class AuthResponse {
-        public String token;
-        public String role;
+    @GetMapping("/stats")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public Map<String, Object> getStats() {
+        long users = userInfoRepository.count();
+        long caravanes = caravaneRepository.count();
+        long reservations = reservationRepository.count();
+        
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("users", users);
+        stats.put("caravanes", caravanes);
+        stats.put("reservations", reservations);
+        return stats;
+    }
 
-        public AuthResponse(String token, String role) {
-            this.token = token;
-            this.role = role;
+    @GetMapping("/debug-auth")
+    public Map<String, Object> debugAuth() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Map<String, Object> debug = new HashMap<>();
+        
+        if (auth != null) {
+            debug.put("authenticated", auth.isAuthenticated());
+            debug.put("principal", auth.getPrincipal().toString());
+            debug.put("authorities", auth.getAuthorities().toString());
+            debug.put("name", auth.getName());
+            
+            // Check if user has admin role specifically
+            boolean hasAdminRole = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+            debug.put("hasAdminRole", hasAdminRole);
+        } else {
+            debug.put("authentication", "null");
         }
+        
+        return debug;
     }
 }

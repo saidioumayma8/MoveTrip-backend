@@ -1,12 +1,11 @@
 package org.budgetmanager.backend.service;
 
-import org.budgetmanager.backend.model.Role;
-import org.budgetmanager.backend.model.UserInfo;
-import org.budgetmanager.backend.repository.RoleRepository;
+// FIX: Change this import
+// import com.ey.springboot3security.entity.UserInfo;
+import org.budgetmanager.backend.model.UserInfo; // <-- CORRECTED IMPORT
+
 import org.budgetmanager.backend.repository.UserInfoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Primary;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,68 +14,53 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import jakarta.transaction.Transactional;
-import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 @Service
-@Primary
 public class UserInfoService implements UserDetailsService {
 
     private final UserInfoRepository repository;
-    private final RoleRepository roleRepository;
     private final PasswordEncoder encoder;
 
     @Autowired
-    public UserInfoService(UserInfoRepository repository, RoleRepository roleRepository, PasswordEncoder encoder) {
+    public UserInfoService(UserInfoRepository repository, PasswordEncoder encoder) {
         this.repository = repository;
-        this.roleRepository = roleRepository;
         this.encoder = encoder;
     }
 
+    // Method to load user details by username (email)
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Optional<UserInfo> userInfoOptional = repository.findByEmail(username);
+        // Fetch user from the database by email (username)
+        Optional<UserInfo> userInfo = repository.findByEmail(username);
 
-        if (userInfoOptional.isEmpty()) {
+        if (userInfo.isEmpty()) {
             throw new UsernameNotFoundException("User not found with email: " + username);
         }
 
-        UserInfo user = userInfoOptional.get();
+        // Convert UserInfo to UserDetails (UserInfoDetails) - You have two options here:
+        // Option A: If UserInfoDetails is needed for Spring Security context
+        // UserInfo user = userInfo.get();
+        // return new UserInfoDetails(user); // <-- This is likely what you want if you use UserInfoDetails for auth
 
-        Collection<? extends GrantedAuthority> authorities = Collections.singletonList(
-                new SimpleGrantedAuthority(user.getRole().getName())
-        );
-
-        return new User(user.getEmail(), user.getPassword(), authorities);
+        // Option B: If you just want Spring Security's default User object (as currently written)
+        UserInfo user = userInfo.get();
+        // Note: The User constructor takes username, password, and Collection<? extends GrantedAuthority>
+        // You're passing a String for roles, which might cause a type error if roles is not converted.
+        // It's better to convert roles to SimpleGrantedAuthority list as done in UserInfoDetails.
+        // For now, let's stick to what you have, but be aware of potential runtime issues if roles is not a SimpleGrantedAuthority list.
+        return new User(user.getEmail(), user.getPassword(),
+                user.getRoles().equals("ROLE_ADMIN") ? List.of(new SimpleGrantedAuthority("ROLE_ADMIN")) : List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        // OR if roles can be multiple comma-separated:
+        // List.of(user.getRoles().split(",")).stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList())
     }
 
-    @Transactional
+    // Add any additional methods for registering or managing users
     public String addUser(UserInfo userInfo) {
-        if (repository.existsByEmail(userInfo.getEmail())) {
-            throw new IllegalArgumentException("User with this email already exists.");
-        }
-
-        if (repository.existsByUsername(userInfo.getUsername())) {
-            throw new IllegalArgumentException("User with this username already exists.");
-        }
-
-        Role defaultRole = roleRepository.findByName("ROLE_USER")
-                .orElseThrow(() -> new IllegalStateException("Default role 'ROLE_USER' not found in database."));
-
-        userInfo.setRole(defaultRole);
+        // Encrypt password before saving
         userInfo.setPassword(encoder.encode(userInfo.getPassword()));
         repository.save(userInfo);
         return "User added successfully!";
     }
-
-    public UserInfo findById(Long id) {
-        if (id == null) {
-            throw new IllegalArgumentException("User ID must not be null");
-        }
-        return repository.findById(id).orElse(null);
-    }
-
 }
-

@@ -5,10 +5,11 @@ import java.time.LocalDate;
 
 public class ReservationRequest {
     private String caravaneId;
-    private LocalDate startDate;
+    private String startDate;
     private int numberOfGuests;
     private int numberOfDays;
     private BigDecimal totalPrice;
+    private Long userId;
 
     // Getters and Setters
     public String getCaravaneId() {
@@ -17,10 +18,10 @@ public class ReservationRequest {
     public void setCaravaneId(String caravaneId) {
         this.caravaneId = caravaneId;
     }
-    public LocalDate getStartDate() {
+    public String getStartDate() {
         return startDate;
     }
-    public void setStartDate(LocalDate startDate) {
+    public void setStartDate(String startDate) {
         this.startDate = startDate;
     }
     public int getNumberOfGuests() {
@@ -41,4 +42,7 @@ public class ReservationRequest {
     public void setTotalPrice(BigDecimal totalPrice) {
         this.totalPrice = totalPrice;
     }
+
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
 }

@@ -1,16 +1,17 @@
 package org.budgetmanager.backend.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
+import jakarta.persistence.*; // Or javax.persistence
+
 import java.io.Serializable;
-import java.math.BigDecimal;
+import java.math.BigDecimal; // For precise currency values
 import java.time.LocalDateTime;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
 @Table(name = "caravanes")
 public class Caravane implements Serializable {
-
     private static final long serialVersionUID = 1L;
 
     @Id
@@ -18,35 +19,38 @@ public class Caravane implements Serializable {
     private Long id;
 
     @Column(nullable = false, length = 100)
-    private String name;
+    private String name; // e.g., "Family Camper Van", "Luxury Motorhome"
 
     @Column(nullable = false, length = 255)
     private String description;
 
     @Column(nullable = false)
-    private String type;
+    private String type; // e.g., "Van Aménagé", "Caravane", "Camping-car"
 
     @Column(nullable = false)
-    private int capacity;
+    private int capacity; // Number of people
 
     @Column(nullable = false)
-    private BigDecimal pricePerDay;
+    private BigDecimal pricePerDay; // Using BigDecimal for currency
 
-    @ElementCollection
+    @ElementCollection // For storing a collection of strings (e.g., image URLs)
     @CollectionTable(name = "caravane_images", joinColumns = @JoinColumn(name = "caravane_id"))
-    @Column(name = "image_url")
-    private List<String> imageUrls;
+    @Column(name = "image_url", columnDefinition = "LONGTEXT")
+    private List<String> imageUrls; // List of image URLs
 
     @Column(nullable = false)
-    private String city;
+    private String city; // Location where the caravane is based
 
     @Column(name = "available", nullable = false)
-    private boolean isAvailable;
+    private boolean isAvailable; // Whether it's currently available for booking
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id", nullable = false)
+    @Column(name = "approval_status", nullable = false, length = 50)
+    private String approvalStatus; // "PENDING", "APPROVED", "REJECTED"
+
+    @ManyToOne(fetch = FetchType.LAZY) // Lazy fetch as we might not always need the owner details
+    @JoinColumn(name = "owner_id", nullable = false) // Link to the user who owns/lists this caravane
     @JsonIgnore
-    private UserInfo owner;
+    private UserInfo owner; // The user (LOUER) who owns this caravane
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -54,9 +58,11 @@ public class Caravane implements Serializable {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    // Constructors
     public Caravane() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
+        this.approvalStatus = "PENDING"; // Default to pending approval
     }
 
     @PrePersist
@@ -70,8 +76,7 @@ public class Caravane implements Serializable {
         updatedAt = LocalDateTime.now();
     }
 
-    // ----------------- GETTERS & SETTERS -----------------
-    // Corrected: The return type of getId() must be Long, not String
+    // Getters and Setters (generate all of them)
     public Long getId() {
         return id;
     }
@@ -144,12 +149,26 @@ public class Caravane implements Serializable {
         isAvailable = available;
     }
 
+    public String getApprovalStatus() {
+        return approvalStatus;
+    }
+
+    public void setApprovalStatus(String approvalStatus) {
+        this.approvalStatus = approvalStatus;
+    }
+
     public UserInfo getOwner() {
         return owner;
     }
 
     public void setOwner(UserInfo owner) {
         this.owner = owner;
+    }
+
+    // Expose ownerId for frontend without serializing the lazy proxy
+    @JsonProperty("ownerId")
+    public Long getOwnerId() {
+        return owner != null ? owner.getId() : null;
     }
 
     public LocalDateTime getCreatedAt() {
