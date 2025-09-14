@@ -24,6 +24,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.core.GrantedAuthority;
 
 import java.util.Collection;
+import java.util.Arrays;
 
 import java.util.List;
 import java.util.Map;
@@ -222,7 +223,7 @@ class UserControllerTest {
         when(authentication.getPrincipal()).thenReturn("admin@example.com");
         when(authentication.getName()).thenReturn("admin@example.com");
         when(authentication.getAuthorities()).thenReturn(
-                (Collection<? extends GrantedAuthority>) List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+                Arrays.asList(new SimpleGrantedAuthority("ROLE_ADMIN"))
         );
 
         // When
@@ -255,7 +256,7 @@ class UserControllerTest {
         when(authentication.getPrincipal()).thenReturn("user@example.com");
         when(authentication.getName()).thenReturn("user@example.com");
         when(authentication.getAuthorities()).thenReturn(
-                (Collection<? extends GrantedAuthority>) List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                Arrays.asList(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
         // When
