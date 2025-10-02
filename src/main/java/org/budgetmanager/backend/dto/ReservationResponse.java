@@ -16,6 +16,7 @@ public class ReservationResponse {
     private LocalDate startDate;
     private LocalDate endDate;
     private BigDecimal totalPrice;
+    private Integer numberOfGuests;
     private String status;
     private String paymentStatus;
     private LocalDateTime createdAt;
@@ -25,6 +26,7 @@ public class ReservationResponse {
         this.startDate = reservation.getStartDate();
         this.endDate = reservation.getEndDate();
         this.totalPrice = reservation.getTotalPrice();
+        this.numberOfGuests = reservation.getNumberOfGuests();
         this.status = reservation.getStatus();
         this.paymentStatus = reservation.getPaymentStatus();
         this.createdAt = reservation.getCreatedAt();
@@ -79,6 +81,10 @@ public class ReservationResponse {
 
     public BigDecimal getTotalPrice() {
         return totalPrice;
+    }
+
+    public Integer getNumberOfGuests() {
+        return numberOfGuests;
     }
 
     public String getStatus() {

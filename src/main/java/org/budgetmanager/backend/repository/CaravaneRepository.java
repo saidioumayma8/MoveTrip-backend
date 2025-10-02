@@ -9,4 +9,5 @@ public interface CaravaneRepository extends JpaRepository<Caravane, Long> {
     List<Caravane> findByOwner_Id(Long ownerId); // Find caravanes by owner
     List<Caravane> findByCityAndIsAvailableTrue(String city); // Search by city
     List<Caravane> findByApprovalStatus(String approvalStatus); // Find by approval status
+    List<Caravane> findByCity(String city); // Find caravanes by city
 }

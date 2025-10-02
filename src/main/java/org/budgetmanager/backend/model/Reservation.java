@@ -32,6 +32,9 @@ public class Reservation implements Serializable {
     @Column(name = "total_price", nullable = false)
     private BigDecimal totalPrice;
 
+    @Column(name = "number_of_guests")
+    private Integer numberOfGuests;
+
     @Column(nullable = false, length = 50)
     private String status; // e.g., "PENDING", "CONFIRMED", "CANCELLED", "COMPLETED"
 
@@ -108,6 +111,14 @@ public class Reservation implements Serializable {
 
     public void setTotalPrice(BigDecimal totalPrice) {
         this.totalPrice = totalPrice;
+    }
+
+    public Integer getNumberOfGuests() {
+        return numberOfGuests;
+    }
+
+    public void setNumberOfGuests(Integer numberOfGuests) {
+        this.numberOfGuests = numberOfGuests;
     }
 
     public String getStatus() {

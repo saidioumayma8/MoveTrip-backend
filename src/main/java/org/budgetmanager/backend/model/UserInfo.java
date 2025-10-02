@@ -4,15 +4,20 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.Collections;
 
 @Entity
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "users")
-public class UserInfo implements Serializable{
+public class UserInfo implements UserDetails, Serializable{
 
         private static final long serialVersionUID = 1L;
 
@@ -66,6 +71,7 @@ public class UserInfo implements Serializable{
             this.id = id;
         }
 
+        @Override
         public String getUsername() {
             return username;
         }
@@ -74,6 +80,7 @@ public class UserInfo implements Serializable{
             this.username = username;
         }
 
+        @Override
         public String getPassword() {
             return password;
         }
@@ -119,4 +126,32 @@ public class UserInfo implements Serializable{
             return role != null ? role.getName() : "ROLE_USER";
         }
 
+        // UserDetails implementation
+        @Override
+        public Collection<? extends GrantedAuthority> getAuthorities() {
+            if (role != null) {
+                return Collections.singletonList(new SimpleGrantedAuthority(role.getName()));
+            }
+            return Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
+        }
+
+        @Override
+        public boolean isAccountNonExpired() {
+            return true;
+        }
+
+        @Override
+        public boolean isAccountNonLocked() {
+            return true;
+        }
+
+        @Override
+        public boolean isCredentialsNonExpired() {
+            return true;
+        }
+
+        @Override
+        public boolean isEnabled() {
+            return true;
+        }
     }

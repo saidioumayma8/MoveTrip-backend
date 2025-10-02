@@ -24,6 +24,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: movetrip_db
+
     volumes:
       - db_data:/var/lib/mysql
     networks:

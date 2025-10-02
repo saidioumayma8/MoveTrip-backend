@@ -12,4 +12,6 @@ public interface UserInfoRepository extends JpaRepository<UserInfo, Long> {
     Optional<UserInfo> findByEmail(String email); // Use 'email' if that is the correct field for login
     Boolean existsByUsername(String username);
     Boolean existsByEmail(String email);
+
+    Optional<UserInfo> getUserInfosByUsername(String username);
 }

@@ -1,5 +1,3 @@
-// File: org/budgetmanager/backend/controller/ReservationCntroller.java
-
 package org.budgetmanager.backend.controller;
 
 import org.budgetmanager.backend.dto.ReservationResponse;
@@ -43,7 +41,7 @@ public class ReservationCntroller {
     @Autowired
     private ReservationService reservationService;
 
-    // This method is for CREATING a reservation via a POST request
+
     @PostMapping
     public ResponseEntity<Reservation> createReservation(@RequestBody ReservationRequest reservationRequest) {
         Caravane caravane = caravaneRepository.findById(Long.parseLong(reservationRequest.getCaravaneId()))
@@ -56,7 +54,7 @@ public class ReservationCntroller {
         UserInfo userInfo = userInfoRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
 
-        // Prevent owner from reserving their own caravane
+
         if (caravane.getOwner() != null && caravane.getOwner().getId().equals(userInfo.getId())) {
             return ResponseEntity.badRequest().build();
         }
@@ -68,6 +66,7 @@ public class ReservationCntroller {
         reservation.setStartDate(start);
         reservation.setEndDate(start.plusDays(reservationRequest.getNumberOfDays()));
         reservation.setTotalPrice(reservationRequest.getTotalPrice());
+        reservation.setNumberOfGuests(reservationRequest.getNumberOfGuests());
         reservation.setStatus("PENDING");
         reservation.setPaymentStatus("UNPAID");
 
@@ -76,7 +75,7 @@ public class ReservationCntroller {
         return ResponseEntity.ok(savedReservation);
     }
 
-    // This method is for GETTING a list of reservations
+
     @GetMapping
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<List<ReservationResponse>> getAllReservations() {
@@ -91,13 +90,13 @@ public class ReservationCntroller {
     @GetMapping("/my-reservations")
     @PreAuthorize("hasAuthority('ROLE_USER') or hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<List<ReservationResponse>> getMyReservations() {
-        // Get authenticated user's email from security context
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String currentPrincipalEmail = authentication.getName();
         
         System.out.println("User " + currentPrincipalEmail + " requesting their reservations");
         
-        // Find the user entity from the database using their email
+
         Optional<UserInfo> userOptional = userInfoRepository.findByEmail(currentPrincipalEmail);
         
         if (userOptional.isPresent()) {

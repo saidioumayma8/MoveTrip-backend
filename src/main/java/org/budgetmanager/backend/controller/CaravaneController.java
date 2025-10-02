@@ -12,9 +12,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -23,6 +20,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/caravanes")
+@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:4201"})
 public class CaravaneController {
     @Autowired
     private CaravaneService service;
@@ -32,11 +30,11 @@ public class CaravaneController {
 
     @GetMapping
     public List<Caravane> getAll() {
-        // Only return approved caravanes for public access
+
         List<Caravane> approved = service.findByApprovalStatus("APPROVED");
         System.out.println("Public caravan request - Found " + approved.size() + " approved caravanes");
 
-        // Debug: also check total caravanes
+
         List<Caravane> allCaravanes = (List<Caravane>) service.findAll();
         System.out.println("Debug: Total caravanes in database: " + allCaravanes.size());
 
@@ -70,7 +68,7 @@ public class CaravaneController {
     @GetMapping("/pending")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public List<Caravane> getPendingCaravanes() {
-        // Debug authentication context
+
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         System.out.println("Admin endpoint - Authentication: " + auth);
         System.out.println("Admin endpoint - Principal: " + auth.getPrincipal());
@@ -100,26 +98,42 @@ public class CaravaneController {
         return service.findByOwnerId(ownerId);
     }
 
+    @GetMapping("/my-caravanes")
+    //@PreAuthorize("hasAuthority('ROLE_USER')")
+    public List<Caravane> getMyCaravanes() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentPrincipalEmail = authentication.getName();
+
+        Optional<UserInfo> userOptional = userInfoRepository.findByEmail(currentPrincipalEmail);
+        if (userOptional.isPresent()) {
+            UserInfo user = userOptional.get();
+            return service.findByOwnerId(user.getId());
+        } else {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found.");
+        }
+    }
+
     @PostMapping
-    @PreAuthorize("hasRole('ROLE_USER')") // Restored security for user creation
+    // FIX: Changed hasRole('ROLE_USER') to hasAuthority('ROLE_USER')
+    @PreAuthorize("hasAuthority('ROLE_USER')")
     public ResponseEntity<Caravane> create(@RequestBody Caravane caravane) {
         System.out.println("Creating new caravane: " + caravane.getName());
         System.out.println("Initial approval status: " + caravane.getApprovalStatus());
 
-        // Get the authenticated user's email from the security context
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String currentPrincipalEmail = authentication.getName();
         System.out.println("Authenticated user: " + currentPrincipalEmail);
 
-        // Find the user entity from the database using their email
+
         Optional<UserInfo> ownerOptional = userInfoRepository.findByEmail(currentPrincipalEmail);
 
         if (ownerOptional.isPresent()) {
             UserInfo owner = ownerOptional.get();
-            // Associate the authenticated user as the owner of the new caravane
+
             caravane.setOwner(owner);
 
-            // Set initial status to PENDING for admin approval
+
             caravane.setApprovalStatus("PENDING");
             caravane.setAvailable(false);
 
@@ -128,13 +142,14 @@ public class CaravaneController {
 
             return new ResponseEntity<>(savedCaravane, HttpStatus.CREATED);
         } else {
-            // This should not happen if the JWT token is valid and corresponds to an existing user
+
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user not found.");
         }
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ROLE_USER')") // Restored security for user updates
+    // FIX: Changed hasRole('ROLE_USER') to hasAuthority('ROLE_USER')
+    @PreAuthorize("hasAuthority('ROLE_USER')")
     public Caravane update(@PathVariable Long id, @RequestBody Caravane c) {
         c.setId(id);
         return service.save(c);
@@ -167,7 +182,7 @@ public class CaravaneController {
             return ResponseEntity.notFound().build();
         }
         caravane.setApprovalStatus("APPROVED");
-        caravane.setAvailable(true); // Make it available when approved
+        caravane.setAvailable(true);
         Caravane updated = service.save(caravane);
         return ResponseEntity.ok(updated);
     }
@@ -227,7 +242,7 @@ public class CaravaneController {
             return ResponseEntity.notFound().build();
         }
         caravane.setApprovalStatus("REJECTED");
-        caravane.setAvailable(false); // Make it unavailable when rejected
+        caravane.setAvailable(false);
         Caravane updated = service.save(caravane);
         return ResponseEntity.ok(updated);
     }
@@ -241,5 +256,23 @@ public class CaravaneController {
         }
         return all;
     }
-}
 
+    @PostMapping("/approve-all-simple")
+    public ResponseEntity<String> approveAllSimple() {
+        List<Caravane> allCaravanes = (List<Caravane>) service.findAll();
+        int approvedCount = 0;
+
+        for (Caravane caravane : allCaravanes) {
+            if (caravane.getApprovalStatus() == null ||
+                    caravane.getApprovalStatus().trim().isEmpty() ||
+                    "PENDING".equals(caravane.getApprovalStatus())) {
+                caravane.setApprovalStatus("APPROVED");
+                caravane.setAvailable(true);
+                service.save(caravane);
+                approvedCount++;
+            }
+        }
+
+        return ResponseEntity.ok("Approved " + approvedCount + " caravanes successfully!");
+    }
+}

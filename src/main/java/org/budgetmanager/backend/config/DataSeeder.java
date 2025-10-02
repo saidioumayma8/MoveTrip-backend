@@ -30,7 +30,7 @@ public class DataSeeder {
             PasswordEncoder passwordEncoder
     ) {
         return args -> {
-            // Seed roles
+
             Role roleAdmin = roleRepository.findByName("ROLE_ADMIN").orElseGet(() -> {
                 Role r = new Role();
                 r.setName("ROLE_ADMIN");
@@ -42,7 +42,7 @@ public class DataSeeder {
                 return roleRepository.save(r);
             });
 
-            // Seed users if none
+
             if (userRepository.count() == 0) {
                 UserInfo admin = new UserInfo();
                 admin.setUsername("admin");
@@ -59,7 +59,7 @@ public class DataSeeder {
                 userRepository.save(user);
             }
 
-            // Seed caravanes if none
+
             if (caravaneRepository.count() == 0) {
                 UserInfo owner = userRepository.findAll().stream().findFirst().orElse(null);
                 if (owner != null) {
@@ -73,7 +73,7 @@ public class DataSeeder {
                     c1.setCity("Marrakech");
                     c1.setAvailable(true);
                     c1.setOwner(owner);
-                    c1.setApprovalStatus("APPROVED"); // Auto-approve seeded caravans
+                    c1.setApprovalStatus("APPROVED");
 
                     Caravane c2 = new Caravane();
                     c2.setName("Explorer XL");
@@ -85,13 +85,13 @@ public class DataSeeder {
                     c2.setCity("Agadir");
                     c2.setAvailable(true);
                     c2.setOwner(owner);
-                    c2.setApprovalStatus("APPROVED"); // Auto-approve seeded caravans
+                    c2.setApprovalStatus("APPROVED");
 
                     caravaneRepository.saveAll(Arrays.asList(c1, c2));
                 }
             }
 
-            // Seed reservations if none
+
             if (reservationRepository.count() == 0) {
                 UserInfo anyUser = userRepository.findAll().stream().filter(u -> "ROLE_USER".equals(u.getRole().getName())).findFirst().orElse(null);
                 Caravane anyCar = caravaneRepository.findAll().stream().findFirst().orElse(null);

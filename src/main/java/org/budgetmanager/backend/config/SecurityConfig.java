@@ -7,9 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -29,85 +27,73 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    private final UserDetailsService userDetailsService;
+    private final JwtAuthFilter jwtAuthFilter;
 
-    /*
-     * Main security configuration
-     * Defines endpoint access rules and JWT filter setup
-     */
+    public SecurityConfig(UserDetailsService userDetailsService, JwtAuthFilter jwtAuthFilter) {
+        this.userDetailsService = userDetailsService;
+        this.jwtAuthFilter = jwtAuthFilter;
+    }
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Disable CSRF (not needed for stateless JWT)
                 .csrf(csrf -> csrf.disable())
-                // Enable CORS with our configuration
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-                // Configure endpoint authorization
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
-                        .requestMatchers("/auth/authenticateAndGetRole", "/auth/addNewUser", "/auth/welcome", "/auth/debug-auth").permitAll()
-                        .requestMatchers("/api/caravanes/debug-all-no-auth").permitAll() // Temporary debug endpoint
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/caravanes/**").permitAll() // Allow public GET for caravans
-                        .requestMatchers("/auth/stats", "/auth/users").authenticated()
-                        .requestMatchers("/api/reservations/**", "/api/caravanes/**").authenticated() // Other caravane methods still authenticated
+                        // Public endpoints - no authentication required
+                        .requestMatchers(
+                                "/auth/login",
+                                "/auth/register",
+                                "/auth/welcome",
+                                "/auth/check-auth",
+                                "/auth/debug-auth",
+                                "/auth/debug-users"
+                        ).permitAll()
+                        .requestMatchers("/api/caravanes/debug-all-no-auth",
+                                "/api/caravanes/fix-approval-status",
+                                "/api/caravanes/approve-all-simple").permitAll()
+                        // Public caravanes endpoint
+                        .requestMatchers(HttpMethod.GET, "/api/caravanes").permitAll()
+                        .requestMatchers("/api/caravanes/").permitAll()
+                        // All other requests require authentication
                         .anyRequest().authenticated()
                 )
-
-                // Stateless session (required for JWT)
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-                // Set custom authentication provider
-                .authenticationProvider(authenticationProvider(null))
-
-                // Add JWT filter before Spring Security's default filter
+                .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    /*
-     * Password encoder bean (uses BCrypt hashing)
-     * Critical for secure password storage
-     */
+    @Bean
+    public AuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder());
+        return provider;
+    }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    /*
-     * Authentication provider configuration
-     * Links UserDetailsService and PasswordEncoder
-     */
-    @Bean
-    public AuthenticationProvider authenticationProvider(UserDetailsService userDetailsService) {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        if (userDetailsService != null) {
-            provider.setUserDetailsService(userDetailsService);
-        }
-        provider.setPasswordEncoder(passwordEncoder());
-        return provider;
-    }
-
-    /*
-     * Authentication manager bean
-     * Required for programmatic authentication (e.g., in /generateToken)
-     */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
-    // Note: The actual UserDetailsService bean is provided by UserInfoService (implements UserDetailsService)
-
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowCredentials(true);
-        configuration.setAllowedOriginPatterns(java.util.List.of("http://localhost:4200", "http://localhost:4201", "http://localhost:4202"));
+        configuration.setAllowedOriginPatterns(java.util.List.of("http://localhost:*", "http://127.0.0.1:*"));
+        configuration.setAllowedOrigins(java.util.List.of("http://localhost:4200", "http://localhost:4201", "http://127.0.0.1:4200"));
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(java.util.List.of("*"));
         configuration.setExposedHeaders(java.util.List.of("Authorization", "Content-Type"));
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

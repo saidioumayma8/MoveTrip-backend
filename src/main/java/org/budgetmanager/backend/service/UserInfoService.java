@@ -1,11 +1,12 @@
 package org.budgetmanager.backend.service;
 
-// FIX: Change this import
-// import com.ey.springboot3security.entity.UserInfo;
-import org.budgetmanager.backend.model.UserInfo; // <-- CORRECTED IMPORT
 
+import org.budgetmanager.backend.model.UserInfo;
+import org.budgetmanager.backend.model.Role;
 import org.budgetmanager.backend.repository.UserInfoRepository;
+import org.budgetmanager.backend.repository.RoleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -21,45 +22,52 @@ import java.util.Optional;
 public class UserInfoService implements UserDetailsService {
 
     private final UserInfoRepository repository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder encoder;
 
     @Autowired
-    public UserInfoService(UserInfoRepository repository, PasswordEncoder encoder) {
+    public UserInfoService(UserInfoRepository repository, 
+                          RoleRepository roleRepository, 
+                          @Lazy PasswordEncoder encoder) {
         this.repository = repository;
+        this.roleRepository = roleRepository;
         this.encoder = encoder;
     }
 
-    // Method to load user details by username (email)
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // Fetch user from the database by email (username)
-        Optional<UserInfo> userInfo = repository.findByEmail(username);
+        Optional<UserInfo> userInfo = repository.getUserInfosByUsername(username);
 
         if (userInfo.isEmpty()) {
             throw new UsernameNotFoundException("User not found with email: " + username);
         }
 
-        // Convert UserInfo to UserDetails (UserInfoDetails) - You have two options here:
-        // Option A: If UserInfoDetails is needed for Spring Security context
-        // UserInfo user = userInfo.get();
-        // return new UserInfoDetails(user); // <-- This is likely what you want if you use UserInfoDetails for auth
-
-        // Option B: If you just want Spring Security's default User object (as currently written)
         UserInfo user = userInfo.get();
-        // Note: The User constructor takes username, password, and Collection<? extends GrantedAuthority>
-        // You're passing a String for roles, which might cause a type error if roles is not converted.
-        // It's better to convert roles to SimpleGrantedAuthority list as done in UserInfoDetails.
-        // For now, let's stick to what you have, but be aware of potential runtime issues if roles is not a SimpleGrantedAuthority list.
         return new User(user.getEmail(), user.getPassword(),
                 user.getRoles().equals("ROLE_ADMIN") ? List.of(new SimpleGrantedAuthority("ROLE_ADMIN")) : List.of(new SimpleGrantedAuthority("ROLE_USER")));
-        // OR if roles can be multiple comma-separated:
-        // List.of(user.getRoles().split(",")).stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList())
     }
 
-    // Add any additional methods for registering or managing users
     public String addUser(UserInfo userInfo) {
-        // Encrypt password before saving
+        // Check if email already exists
+        if (repository.findByEmail(userInfo.getEmail()).isPresent()) {
+            throw new IllegalArgumentException("Email already exists: " + userInfo.getEmail());
+        }
+        
+        // Hash the password
         userInfo.setPassword(encoder.encode(userInfo.getPassword()));
+        
+        // Set the username to email for simplicity if username is null
+        if (userInfo.getUsername() == null || userInfo.getUsername().trim().isEmpty()) {
+            userInfo.setUsername(userInfo.getEmail());
+        }
+        
+        // Set the default role if not already set
+        if (userInfo.getRole() == null) {
+            Role userRole = roleRepository.findByName("ROLE_USER")
+                .orElseThrow(() -> new RuntimeException("Default role ROLE_USER not found"));
+            userInfo.setRole(userRole);
+        }
+        
         repository.save(userInfo);
         return "User added successfully!";
     }
