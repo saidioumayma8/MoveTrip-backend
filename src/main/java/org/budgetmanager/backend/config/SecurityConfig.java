@@ -45,17 +45,26 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/auth/login",
                                 "/auth/register",
+                                "/auth/logout",         // <-- FIX 1: Allow everyone to access logout
                                 "/auth/welcome",
                                 "/auth/check-auth",
                                 "/auth/debug-auth",
-                                "/auth/debug-users"
+                                "/auth/debug-users",
+                                "/auth/reset-test-users",
+                                "/auth/make-admin"
                         ).permitAll()
+
+                        // FIX 2: Restrict Pending Reservations to Admin only
+                        // This fixes the 403 error for non-admin users on login
+                        .requestMatchers(HttpMethod.GET, "/api/reservations/pending").hasAuthority("ROLE_ADMIN")
+
                         .requestMatchers("/api/caravanes/debug-all-no-auth",
                                 "/api/caravanes/fix-approval-status",
                                 "/api/caravanes/approve-all-simple").permitAll()
                         // Public caravanes endpoint
                         .requestMatchers(HttpMethod.GET, "/api/caravanes").permitAll()
                         .requestMatchers("/api/caravanes/").permitAll()
+
                         // All other requests require authentication
                         .anyRequest().authenticated()
                 )

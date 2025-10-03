@@ -1,9 +1,11 @@
 package org.budgetmanager.backend.controller;
 import org.budgetmanager.backend.model.AuthRequest;
-import org.budgetmanager.backend.model.UserInfo; // <-- ENSURE THIS IS PRESENT AND CORRECT
+import org.budgetmanager.backend.model.UserInfo;
+import org.budgetmanager.backend.model.Role;
 import org.budgetmanager.backend.repository.UserInfoRepository;
 import org.budgetmanager.backend.repository.CaravaneRepository;
 import org.budgetmanager.backend.repository.ReservationRepository;
+import org.budgetmanager.backend.repository.RoleRepository;
 import org.budgetmanager.backend.service.UserInfoService;
 import org.budgetmanager.backend.service.JwtService;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,9 +18,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/auth")
@@ -30,6 +34,8 @@ public class UserController {
     private final CaravaneRepository caravaneRepository;
     private final ReservationRepository reservationRepository;
     private final JwtService jwtService;
+    private final PasswordEncoder passwordEncoder;
+    private final RoleRepository roleRepository;
 
     @Autowired
     public UserController(UserInfoService service,
@@ -37,13 +43,17 @@ public class UserController {
                           UserInfoRepository userInfoRepository,
                           CaravaneRepository caravaneRepository,
                           ReservationRepository reservationRepository,
-                          JwtService jwtService) {
+                          JwtService jwtService,
+                          PasswordEncoder passwordEncoder,
+                          RoleRepository roleRepository) {
         this.service = service;
         this.authenticationManager = authenticationManager;
         this.userInfoRepository = userInfoRepository;
         this.caravaneRepository = caravaneRepository;
         this.reservationRepository = reservationRepository;
         this.jwtService = jwtService;
+        this.passwordEncoder = passwordEncoder;
+        this.roleRepository = roleRepository;
     }
 
     @GetMapping("/welcome")
@@ -58,10 +68,10 @@ public class UserController {
         
         if (authentication != null && authentication.isAuthenticated() && 
             !"anonymousUser".equals(authentication.getPrincipal())) {
-            UserInfo user = userInfoRepository.findByEmail(authentication.getName())
-                    .orElse(null);
+            Optional<UserInfo> userOptional = userInfoRepository.findByEmail(authentication.getName());
             
-            if (user != null) {
+            if (userOptional.isPresent()) {
+                UserInfo user = userOptional.get();
                 response.put("authenticated", true);
                 response.put("role", user.getRoles());
                 response.put("userId", user.getId());
@@ -108,8 +118,11 @@ public class UserController {
 
                 System.out.println("helloooo");
 
-                UserInfo user = userInfoRepository.findByEmail(authRequest.getUsername())
-                        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                Optional<UserInfo> userOptional = userInfoRepository.findByEmail(authRequest.getUsername());
+                if (userOptional.isEmpty()) {
+                    throw new UsernameNotFoundException("User not found");
+                }
+                UserInfo user = userOptional.get();
 
                 String jwtToken = jwtService.generateToken(user);
 
@@ -157,4 +170,86 @@ public class UserController {
             return userMap;
         }).collect(java.util.stream.Collectors.toList());
     }
+
+    @PostMapping("/reset-test-users")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<Map<String, Object>> resetTestUsers() {
+        try {
+            // Reset password for admin user
+            Optional<UserInfo> adminUser = userInfoRepository.findByEmail("admin@example.com");
+            if (adminUser.isPresent()) {
+                UserInfo admin = adminUser.get();
+                admin.setPassword(passwordEncoder.encode("admin123"));
+                userInfoRepository.save(admin);
+                System.out.println("Reset password for admin user");
+            }
+            
+            // Reset password for regular user
+            Optional<UserInfo> regularUser = userInfoRepository.findByEmail("john@example.com");
+            if (regularUser.isPresent()) {
+                UserInfo user = regularUser.get();
+                user.setPassword(passwordEncoder.encode("user123"));
+                userInfoRepository.save(user);
+                System.out.println("Reset password for regular user");
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Test user passwords reset successfully");
+            response.put("success", true);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Failed to reset test user passwords: " + e.getMessage());
+            errorResponse.put("success", false);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    @PostMapping("/make-admin")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<Map<String, Object>> makeAdmin(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+            if (email == null || email.isEmpty()) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("message", "Email is required");
+                errorResponse.put("success", false);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            }
+            
+            Optional<UserInfo> userOptional = userInfoRepository.findByEmail(email);
+            if (userOptional.isEmpty()) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("message", "User not found with email: " + email);
+                errorResponse.put("success", false);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            }
+            
+            UserInfo user = userOptional.get();
+            
+            // Find the ROLE_ADMIN role
+            Optional<Role> adminRoleOptional = roleRepository.findByName("ROLE_ADMIN");
+            if (adminRoleOptional.isEmpty()) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("message", "ROLE_ADMIN not found in database");
+                errorResponse.put("success", false);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+            }
+            
+            Role adminRole = adminRoleOptional.get();
+            user.setRole(adminRole);
+            userInfoRepository.save(user);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "User " + email + " has been granted ROLE_ADMIN");
+            response.put("success", true);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Failed to make user admin: " + e.getMessage());
+            errorResponse.put("success", false);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
 }

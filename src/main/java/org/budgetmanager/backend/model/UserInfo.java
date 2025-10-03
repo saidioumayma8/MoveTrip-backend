@@ -73,7 +73,7 @@ public class UserInfo implements UserDetails, Serializable{
 
         @Override
         public String getUsername() {
-            return username;
+            return email;
         }
 
         public void setUsername(String username) {

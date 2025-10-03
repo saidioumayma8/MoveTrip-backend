@@ -79,6 +79,18 @@ public class ReservationCntroller {
     @GetMapping
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<List<ReservationResponse>> getAllReservations() {
+        System.out.println("getAllReservations called");
+        
+        // Log the authentication details
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null) {
+            System.out.println("Authentication: " + authentication);
+            System.out.println("Principal: " + authentication.getPrincipal());
+            System.out.println("Authorities: " + authentication.getAuthorities());
+        } else {
+            System.out.println("No authentication found");
+        }
+        
         List<Reservation> reservations = reservationRepository.findAllWithCaravaneAndUserInfo();
         List<ReservationResponse> responseList = reservations.stream()
                 .map(ReservationResponse::new)

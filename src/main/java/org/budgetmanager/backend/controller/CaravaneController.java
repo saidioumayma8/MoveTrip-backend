@@ -99,7 +99,8 @@ public class CaravaneController {
     }
 
     @GetMapping("/my-caravanes")
-    //@PreAuthorize("hasAuthority('ROLE_USER')")
+    // FIX: Changed hasRole('ROLE_USER') to hasAuthority('ROLE_USER')
+    @PreAuthorize("hasAuthority('ROLE_USER')")
     public List<Caravane> getMyCaravanes() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String currentPrincipalEmail = authentication.getName();

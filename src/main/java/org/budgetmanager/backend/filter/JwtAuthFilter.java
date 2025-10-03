@@ -49,12 +49,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         jwt = authHeader.substring(7);
-        System.out.println(jwt);
+        System.out.println("JWT Token: " + jwt);
         userEmail = jwtService.extractUsername(jwt);
+        System.out.println("Extracted userEmail from token: " + userEmail);
 
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
+            System.out.println("Loaded userDetails: " + userDetails);
+            System.out.println("UserDetails authorities: " + userDetails.getAuthorities());
+            
             if (jwtService.isTokenValid(jwt, userDetails)) {
+                System.out.println("Token is valid for user: " + userEmail);
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
@@ -64,7 +69,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                         new WebAuthenticationDetailsSource().buildDetails(request)
                 );
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+                System.out.println("Authentication set in SecurityContext for user: " + userEmail);
+            } else {
+                System.out.println("Token is NOT valid for user: " + userEmail);
             }
+        } else {
+            System.out.println("Either userEmail is null or authentication already exists");
         }
         filterChain.doFilter(request, response);
     }

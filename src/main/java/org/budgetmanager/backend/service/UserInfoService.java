@@ -36,13 +36,15 @@ public class UserInfoService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Optional<UserInfo> userInfo = repository.getUserInfosByUsername(username);
+        // Since the frontend sends email as username, we should look up by email
+        Optional<UserInfo> userInfo = repository.findByEmail(username);
 
         if (userInfo.isEmpty()) {
             throw new UsernameNotFoundException("User not found with email: " + username);
         }
 
         UserInfo user = userInfo.get();
+        // Return a Spring Security User with the email as username, password, and role
         return new User(user.getEmail(), user.getPassword(),
                 user.getRoles().equals("ROLE_ADMIN") ? List.of(new SimpleGrantedAuthority("ROLE_ADMIN")) : List.of(new SimpleGrantedAuthority("ROLE_USER")));
     }
