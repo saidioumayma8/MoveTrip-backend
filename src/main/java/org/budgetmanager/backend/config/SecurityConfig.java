@@ -1,6 +1,5 @@
 package org.budgetmanager.backend.config;
 
-
 import org.budgetmanager.backend.filter.JwtAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -45,7 +44,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/auth/login",
                                 "/auth/register",
-                                "/auth/logout",         // <-- FIX 1: Allow everyone to access logout
+                                "/auth/logout",
                                 "/auth/welcome",
                                 "/auth/check-auth",
                                 "/auth/debug-auth",
@@ -54,8 +53,10 @@ public class SecurityConfig {
                                 "/auth/make-admin"
                         ).permitAll()
 
+                        // 🔑 ESSENTIAL FIX: Allow all users to access image resource paths
+                        .requestMatchers(HttpMethod.GET, "/uploads/**", "/images/**").permitAll()
+
                         // FIX 2: Restrict Pending Reservations to Admin only
-                        // This fixes the 403 error for non-admin users on login
                         .requestMatchers(HttpMethod.GET, "/api/reservations/pending").hasAuthority("ROLE_ADMIN")
 
                         .requestMatchers("/api/caravanes/debug-all-no-auth",
